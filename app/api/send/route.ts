@@ -1,3 +1,4 @@
+import nodemailer from "nodemailer";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -6,14 +7,70 @@ const supabase = createClient(
 );
 
 export async function GET() {
-  const { data, error } = await supabase
-    .from("emails")
-    .select("*");
+  try {
+    // 1. Get unsent emails WITH campaign_id
+    const { data: emails, error } = await supabase
+      .from("emails")
+      .select("*")
+      .eq("sent", false)
+      .limit(5);
 
-  return Response.json({
-    debug: true,
-    count: data?.length || 0,
-    data,
-    error,
-  });
+    if (error) throw error;
+
+    if (!emails || emails.length === 0) {
+      return Response.json({
+        success: true,
+        sent: 0,
+        message: "No unsent emails found",
+      });
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    let sentCount = 0;
+
+    for (const row of emails) {
+      // 2. Get campaign content
+      const { data: campaign } = await supabase
+        .from("campaigns")
+        .select("*")
+        .eq("id", row.campaign_id)
+        .single();
+
+      if (!campaign) continue;
+
+      // 3. Send email using campaign data
+      await transporter.sendMail({
+        from: `"System" <${process.env.EMAIL_USER}>`,
+        to: row.email,
+        subject: campaign.subject,
+        html: campaign.html,
+      });
+
+      // 4. Mark as sent
+      await supabase
+        .from("emails")
+        .update({ sent: true })
+        .eq("id", row.id);
+
+      sentCount++;
+    }
+
+    return Response.json({
+      success: true,
+      sent: sentCount,
+    });
+
+  } catch (err: any) {
+    return Response.json({
+      success: false,
+      error: err.message,
+    });
+  }
 }
