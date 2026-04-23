@@ -5,15 +5,28 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export default async function handler(req, res) {
-  const { data, error } = await supabase
-    .from("emails")
-    .select("*");
+exports.handler = async () => {
+  try {
+    const { data, error } = await supabase
+      .from("emails")
+      .select("*");
 
-  return res.status(200).json({
-    ok: true,
-    count: data?.length,
-    data,
-    error,
-  });
-}
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        ok: true,
+        count: data?.length || 0,
+        data,
+        error,
+      }),
+    };
+  } catch (err) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        ok: false,
+        error: err instanceof Error ? err.message : "Unknown error",
+      }),
+    };
+  }
+};
