@@ -1,6 +1,8 @@
 import nodemailer from "nodemailer";
 import { createClient } from "@supabase/supabase-js";
 
+console.log("DEBUG VERSION ACTIVE");
+
 // Supabase client (server-side)
 const supabase = createClient(
   process.env.SUPABASE_URL!,
@@ -11,16 +13,12 @@ export async function GET() {
   try {
     // 1. Fetch 5 unsent emails
     const { data: emails, error } = await supabase
-      .from("emails")
-      .select("*")
-      .eq("sent", false)
-      .limit(5);
+    .from("emails")
+    .select("*");
 
-    if (error) {
-      return Response.json({
-        success: false,
-        error: error.message,
-      });
+    return Response.json({
+    debug: true,
+    });
     }
 
     if (!emails || emails.length === 0) {
@@ -64,8 +62,10 @@ export async function GET() {
     }
 
     return Response.json({
-      success: true,
-      sent: sentCount,
+    success: true,
+    sent: emails?.length || 0,
+    data: emails,
+    error,
     });
 
   } catch (error: any) {
