@@ -1,3 +1,5 @@
+export const runtime = "nodejs";
+
 import nodemailer from "nodemailer";
 import { createClient } from "@supabase/supabase-js";
 
@@ -6,9 +8,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function GET() {
+export async function POST() {
   try {
-    // 1. Get unsent emails WITH campaign_id
     const { data: emails, error } = await supabase
       .from("emails")
       .select("*")
@@ -17,7 +18,7 @@ export async function GET() {
 
     if (error) throw error;
 
-    if (!emails || emails.length === 0) {
+    if (!emails?.length) {
       return Response.json({
         success: true,
         sent: 0,
@@ -36,7 +37,6 @@ export async function GET() {
     let sentCount = 0;
 
     for (const row of emails) {
-      // 2. Get campaign content
       const { data: campaign } = await supabase
         .from("campaigns")
         .select("*")
@@ -45,7 +45,6 @@ export async function GET() {
 
       if (!campaign) continue;
 
-      // 3. Send email using campaign data
       await transporter.sendMail({
         from: `"System" <${process.env.EMAIL_USER}>`,
         to: row.email,
@@ -53,7 +52,6 @@ export async function GET() {
         html: campaign.html,
       });
 
-      // 4. Mark as sent
       await supabase
         .from("emails")
         .update({ sent: true })
