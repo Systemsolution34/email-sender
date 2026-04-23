@@ -8,6 +8,14 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// 👇 ADD THIS (for browser testing)
+export async function GET() {
+  return Response.json({
+    message: "API is working. Use POST to send emails.",
+  });
+}
+
+// 👇 Your existing logic
 export async function POST() {
   try {
     const { data: emails, error } = await supabase
